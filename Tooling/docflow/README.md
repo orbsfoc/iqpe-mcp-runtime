@@ -19,6 +19,16 @@
 - `wave3-closure --readiness <file> --removal <file> --shadow-lint <file> --planning-lint <file> --metadata-lint <file> --register <file> --report <file> --doc <file> --date <yyyy-mm-dd>`
 - `wave4-bootstrap --closure <file> --topology <file> --report <file> --doc <file> --date <yyyy-mm-dd>`
 - `v2-demo-readiness --demo-root <dir> --report <file>`
+- `slice-graph-lint --graph <file> --report <file>`
+- `library-search --catalog <file> --report <file> [--query <text>] [--capability <tag>] [--status <status>] [--runtime <runtime>]`
+- `library-decision-lint --register <file> --report <file>`
+- `tech-policy-eval --policy <file> --report <file> --project-phase <phase> --environment <env> --decision-type <type> --technology <tech> [--context-tags <csv>] [--approval-status <status>]`
+- `tech-radar-lint --radar <file> --report <file>`
+- `architecture-ops-lint --boundary <file> --report <file>`
+- `topology-lint --topology <file> --report <file>`
+- `data-boundary-lint --evidence <file> --report <file>`
+- `metadata-overview-lint --metadata <file> --overview <file> --report <file>`
+- `resource-variance-lint --estimation <file> --usage <file> --report <file> [--request-ratio-threshold <n>] [--token-ratio-threshold <n>]`
 
 ## Example
 ```bash
@@ -37,6 +47,16 @@ go run ./cmd/docflow wave3-remove-shadows --readiness ../../Docs/RefactoredProdu
 go run ./cmd/docflow wave3-closure --readiness ../../Docs/RefactoredProductDocs/artifacts/wave3-readiness-report.yaml --removal ../../Docs/RefactoredProductDocs/artifacts/wave3-remove-shadows-report.yaml --shadow-lint ../../Docs/RefactoredProductDocs/artifacts/shadow-lint-report.yaml --planning-lint ../../Docs/RefactoredProductDocs/artifacts/planning-lint-report.yaml --metadata-lint ../../Docs/RefactoredProductDocs/artifacts/metadata-lint-report.yaml --register ../../Docs/RefactoredProductDocs/artifacts/technical-docs-cutover-register.yaml --report ../../Docs/RefactoredProductDocs/artifacts/wave3-closure-report.yaml --doc ../../Docs/RefactoredProductDocs/07-roadmaps/wave3-closure-2026-02-21.md --date 2026-02-21
 go run ./cmd/docflow wave4-bootstrap --closure ../../Docs/RefactoredProductDocs/artifacts/wave3-closure-report.yaml --topology ../../Docs/RefactoredProductDocs/artifacts/multi-repo-topology.yaml --report ../../Docs/RefactoredProductDocs/artifacts/wave4-bootstrap-report.yaml --doc ../../Docs/RefactoredProductDocs/07-roadmaps/wave4-bootstrap-2026-02-21.md --date 2026-02-21
 go run ./cmd/docflow v2-demo-readiness --demo-root ../../portfolio/iqpe-product-template/demo-project-v3 --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/v2-demo-readiness-report.yaml
+go run ./cmd/docflow slice-graph-lint --graph ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/session-plan-orchestration.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/slice-graph-lint-report.yaml
+go run ./cmd/docflow library-search --catalog ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-catalog.yaml --query shared --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-search-report.yaml
+go run ./cmd/docflow library-decision-lint --register ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/new-library-decisions.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-decision-lint-report.yaml
+go run ./cmd/docflow tech-policy-eval --policy ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/phase-tech-policy.yaml --project-phase MVP --environment DEMO --decision-type ORCHESTRATION --technology docker-compose --approval-status APPROVED --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-policy-eval-report.yaml
+go run ./cmd/docflow tech-radar-lint --radar ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-radar-summary.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-radar-lint-report.yaml
+go run ./cmd/docflow architecture-ops-lint --boundary ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/architecture-operations-boundary.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/architecture-ops-lint-report.yaml
+go run ./cmd/docflow topology-lint --topology ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/portfolio-topology.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/topology-lint-report.yaml
+go run ./cmd/docflow data-boundary-lint --evidence ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/data-boundary-evidence.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/data-boundary-lint-report.yaml
+go run ./cmd/docflow metadata-overview-lint --metadata ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/code-unit-metadata.yaml --overview ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/human-readable-overviews.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/metadata-overview-lint-report.yaml
+go run ./cmd/docflow resource-variance-lint --estimation ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/plan-resource-estimation.yaml --usage ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/developer-agent-usage-report.yaml --report ../../portfolio/iqpe-product-template/demo-project-v3/artifacts/resource-variance-summary.yaml
 ```
 
 ## Validation Behavior

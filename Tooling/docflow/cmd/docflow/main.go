@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: docflow <inventory|model|validate|run|diagrams|frontend-diagrams|metadata-lint|planning-lint|shadow-lint|cutover-progress|wave3-readiness|wave3-remediation|wave3-remove-shadows|wave3-closure|wave4-bootstrap|v2-demo-readiness> [flags]")
+		fmt.Println("usage: docflow <inventory|model|validate|run|diagrams|frontend-diagrams|metadata-lint|planning-lint|shadow-lint|cutover-progress|wave3-readiness|wave3-remediation|wave3-remove-shadows|wave3-closure|wave4-bootstrap|v2-demo-readiness|slice-graph-lint|library-search|library-decision-lint|tech-policy-eval|tech-radar-lint|architecture-ops-lint|topology-lint|data-boundary-lint|metadata-overview-lint|resource-variance-lint> [flags]")
 		os.Exit(1)
 	}
 
@@ -133,6 +133,80 @@ func main() {
 		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/v2-demo-readiness-report.yaml", "output v2 demo readiness report path")
 		_ = cmd.Parse(os.Args[2:])
 		mustNoErr(runner.V2DemoReadiness(*demoRoot, *report))
+	case "slice-graph-lint":
+		cmd := flag.NewFlagSet("slice-graph-lint", flag.ExitOnError)
+		graph := cmd.String("graph", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/session-plan-orchestration.yaml", "plan slice graph yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/slice-graph-lint-report.yaml", "output slice graph lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.SliceGraphLint(*graph, *report))
+	case "library-search":
+		cmd := flag.NewFlagSet("library-search", flag.ExitOnError)
+		catalog := cmd.String("catalog", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-catalog.yaml", "library catalog yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-search-report.yaml", "output library search report path")
+		query := cmd.String("query", "", "substring query against common library fields")
+		capability := cmd.String("capability", "", "capability tag filter")
+		status := cmd.String("status", "", "status/stability filter")
+		runtime := cmd.String("runtime", "", "language/runtime filter")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.LibrarySearch(*catalog, *report, *query, *capability, *status, *runtime))
+	case "library-decision-lint":
+		cmd := flag.NewFlagSet("library-decision-lint", flag.ExitOnError)
+		register := cmd.String("register", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/new-library-decisions.yaml", "new library decision register yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/library-decision-lint-report.yaml", "output library decision lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.LibraryDecisionLint(*register, *report))
+	case "tech-policy-eval":
+		cmd := flag.NewFlagSet("tech-policy-eval", flag.ExitOnError)
+		policy := cmd.String("policy", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/phase-tech-policy.yaml", "phase-aware policy yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-policy-eval-report.yaml", "output policy evaluation report path")
+		projectPhase := cmd.String("project-phase", "MVP", "project phase")
+		environment := cmd.String("environment", "DEMO", "target environment")
+		decisionType := cmd.String("decision-type", "ORCHESTRATION", "decision type")
+		technology := cmd.String("technology", "docker-compose", "technology under evaluation")
+		contextTags := cmd.String("context-tags", "", "comma-separated context tags")
+		approvalStatus := cmd.String("approval-status", "APPROVED", "exception approval status")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.TechPolicyEval(*policy, *report, *projectPhase, *environment, *decisionType, *technology, *contextTags, *approvalStatus))
+	case "tech-radar-lint":
+		cmd := flag.NewFlagSet("tech-radar-lint", flag.ExitOnError)
+		radar := cmd.String("radar", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-radar-summary.yaml", "tech radar summary yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/tech-radar-lint-report.yaml", "output tech radar lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.TechRadarLint(*radar, *report))
+	case "architecture-ops-lint":
+		cmd := flag.NewFlagSet("architecture-ops-lint", flag.ExitOnError)
+		boundary := cmd.String("boundary", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/architecture-operations-boundary.yaml", "architecture vs operations boundary yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/architecture-ops-lint-report.yaml", "output architecture-operations lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.ArchitectureOpsLint(*boundary, *report))
+	case "topology-lint":
+		cmd := flag.NewFlagSet("topology-lint", flag.ExitOnError)
+		topology := cmd.String("topology", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/portfolio-topology.yaml", "repository/service topology yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/topology-lint-report.yaml", "output topology lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.TopologyLint(*topology, *report))
+	case "data-boundary-lint":
+		cmd := flag.NewFlagSet("data-boundary-lint", flag.ExitOnError)
+		evidence := cmd.String("evidence", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/data-boundary-evidence.yaml", "agent vs mcp boundary evidence yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/data-boundary-lint-report.yaml", "output data boundary lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.DataBoundaryLint(*evidence, *report))
+	case "metadata-overview-lint":
+		cmd := flag.NewFlagSet("metadata-overview-lint", flag.ExitOnError)
+		metadata := cmd.String("metadata", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/code-unit-metadata.yaml", "code unit metadata yaml")
+		overview := cmd.String("overview", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/human-readable-overviews.yaml", "human readable overviews yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/metadata-overview-lint-report.yaml", "output metadata overview lint report path")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.MetadataOverviewLint(*metadata, *overview, *report))
+	case "resource-variance-lint":
+		cmd := flag.NewFlagSet("resource-variance-lint", flag.ExitOnError)
+		estimation := cmd.String("estimation", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/plan-resource-estimation.yaml", "plan resource estimation yaml")
+		usage := cmd.String("usage", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/developer-agent-usage-report.yaml", "developer agent usage report yaml")
+		report := cmd.String("report", "../../portfolio/iqpe-product-template/demo-project-v3/artifacts/resource-variance-summary.yaml", "output resource variance report path")
+		requestRatio := cmd.Float64("request-ratio-threshold", 0.50, "absolute request variance ratio threshold")
+		tokenRatio := cmd.Float64("token-ratio-threshold", 0.50, "absolute token variance ratio threshold")
+		_ = cmd.Parse(os.Args[2:])
+		mustNoErr(runner.ResourceVarianceLint(*estimation, *usage, *report, *requestRatio, *tokenRatio))
 	default:
 		fmt.Printf("unknown command: %s\n", os.Args[1])
 		os.Exit(1)
