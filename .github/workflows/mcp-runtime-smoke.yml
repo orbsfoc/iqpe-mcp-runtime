@@ -1,0 +1,27 @@
+name: mcp-runtime-smoke
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Verify extracted runtime content
+        run: |
+          test -f README.md
+          test -f CHANGELOG.md
+          test -f OWNERS.md
+          test -f docs/README.md
+          test -f Tooling/docflow/go.mod
+          test -f Tooling/mcp-local/README.md
+      - name: Run docflow Go tests
+        working-directory: Tooling/docflow
+        run: |
+          go test ./...

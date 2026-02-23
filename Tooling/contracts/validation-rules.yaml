@@ -1,0 +1,24 @@
+validation_rules:
+  required_artifacts:
+    - p01-inventory.yaml
+    - p02-model.yaml
+    - p03-ownership.yaml
+    - p04-phase-model.yaml
+    - p05-input-integration.yaml
+    - p06-transform-index.yaml
+    - p07-validation.yaml
+    - p08-migration-roadmaps.yaml
+    - p09-go-mcp-blueprint.yaml
+  gate_order:
+    - traceability
+    - taxonomy
+    - ownership
+    - phase_consistency
+    - link_integrity
+  governance_rules:
+    spec_file: Docs/RefactoredProductDocs/00-governance/governance-file-specs.yaml
+    docs_glob: Docs/RefactoredProductDocs/00-governance/*.md
+    enforce_frontmatter: true
+    enforce_required_sections: true
+    enforce_allowed_tags: true
+    enforce_linked_id_prefixes: true

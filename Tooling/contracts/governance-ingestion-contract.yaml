@@ -1,0 +1,50 @@
+contract_version: 1.0
+purpose: MCP-readable governance document ingestion and validation.
+
+inputs:
+  governance_spec_file: Docs/RefactoredProductDocs/00-governance/governance-file-specs.yaml
+  governance_docs_glob: Docs/RefactoredProductDocs/00-governance/*.md
+
+mcp_methods:
+  - server: policy-mcp
+    name: parseGovernanceDoc
+    input:
+      file_path: string
+      spec_path: string
+    output:
+      ok: bool
+      doc_id: string
+      metadata: object
+      sections_found: [string]
+      violations: [string]
+
+  - server: policy-mcp
+    name: validateGovernanceDomain
+    input:
+      docs_root: string
+      spec_path: string
+    output:
+      ok: bool
+      files_checked: int
+      violations_by_file:
+        - file: string
+          violations: [string]
+
+  - server: docs-graph-mcp
+    name: upsertGovernanceNodes
+    input:
+      parsed_docs: [object]
+    output:
+      ok: bool
+      nodes_created: int
+      edges_created: int
+
+parse_rules:
+  frontmatter_required: true
+  section_headers_required: true
+  linked_ids_required: true
+  allowed_tags_only: true
+
+outputs:
+  parsed_artifact: Docs/RefactoredProductDocs/artifacts/governance-parsed.yaml
+  validation_artifact: Docs/RefactoredProductDocs/artifacts/governance-validation.yaml

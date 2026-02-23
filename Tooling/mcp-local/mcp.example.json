@@ -1,0 +1,36 @@
+{
+  "servers": {
+    "repo-read-local": {
+      "transport": "stdio",
+      "command": "iqpe-localmcp",
+      "args": [
+        "--server",
+        "repo-read"
+      ]
+    },
+    "docflow-actions-local": {
+      "transport": "stdio",
+      "command": "iqpe-localmcp",
+      "args": [
+        "--server",
+        "docflow-actions"
+      ]
+    },
+    "docs-graph-local": {
+      "transport": "stdio",
+      "command": "iqpe-localmcp",
+      "args": [
+        "--server",
+        "docs-graph"
+      ]
+    },
+    "policy-local": {
+      "transport": "stdio",
+      "command": "iqpe-localmcp",
+      "args": [
+        "--server",
+        "policy"
+      ]
+    }
+  }
+}

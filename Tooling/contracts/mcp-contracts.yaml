@@ -1,0 +1,24 @@
+mcp_servers:
+  - server: docs-graph-mcp
+    methods:
+      - name: queryImpacts
+        input: {ids: [string], phase: string}
+        output: {affected_docs: [string], affected_services: [string]}
+      - name: getLatestApproved
+        input: {doc_type: string}
+        output: {doc_id: string, version: string, owner: string}
+
+  - server: policy-mcp
+    methods:
+      - name: validateOwnership
+        input: {artifact_path: string}
+        output: {ok: bool, violations: [string]}
+      - name: validatePhaseTransitions
+        input: {artifact_path: string}
+        output: {ok: bool, violations: [string]}
+      - name: parseGovernanceDoc
+        input: {file_path: string, spec_path: string}
+        output: {ok: bool, doc_id: string, metadata: object, sections_found: [string], violations: [string]}
+      - name: validateGovernanceDomain
+        input: {docs_root: string, spec_path: string}
+        output: {ok: bool, files_checked: int, violations_by_file: [object]}

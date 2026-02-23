@@ -1,0 +1,10 @@
+pipeline:
+  source_root: ../../SampleProductDocs
+  artifacts_root: ../../Docs/RefactoredProductDocs/artifacts
+  phases: [Discovery, MVP, Pilot, Production, Scale]
+  quality_gates:
+    - traceability
+    - taxonomy
+    - ownership
+    - phase_consistency
+    - link_integrity
