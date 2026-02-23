@@ -47,6 +47,8 @@ func V2DemoReadiness(demoRoot, reportPath string) error {
 		{FeatureID: "feature-08", ArtifactPath: "artifacts/data-boundary-evidence.yaml", RequiredKeys: []string{"agent_local_data", "mcp_data", "evidence_links"}},
 		{FeatureID: "feature-09", ArtifactPath: "artifacts/code-unit-metadata.yaml", RequiredKeys: []string{"units"}},
 		{FeatureID: "feature-09", ArtifactPath: "artifacts/human-readable-overviews.yaml", RequiredKeys: []string{"system_overview", "product_overview", "architecture_overview", "operations_overview"}},
+		{FeatureID: "feature-10", ArtifactPath: "artifacts/plan-resource-estimation.yaml", RequiredKeys: []string{"plan_estimations"}},
+		{FeatureID: "feature-10", ArtifactPath: "artifacts/developer-agent-usage-report.yaml", RequiredKeys: []string{"agent_reports", "summary"}},
 	}
 
 	checks := make([]v2FeatureCheck, 0, len(rules))
