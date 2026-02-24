@@ -1278,10 +1278,13 @@ func toolSpecFrom(name, desc string, required ...string) toolSpec {
 
 func runActionToolSpec() toolSpec {
 	props := map[string]any{
-		"action_id":   map[string]any{"type": "string"},
-		"phase":       map[string]any{"type": "string"},
-		"target_root": map[string]any{"type": "string"},
-		"spec_dir":    map[string]any{"type": "string"},
+		"action_id":     map[string]any{"type": "string"},
+		"phase":         map[string]any{"type": "string"},
+		"target_root":   map[string]any{"type": "string"},
+		"spec_dir":      map[string]any{"type": "string"},
+		"workspace_dir": map[string]any{"type": "string"},
+		"tc_file":       map[string]any{"type": "string"},
+		"severity_file": map[string]any{"type": "string"},
 	}
 	return toolSpec{
 		Name:        "run_action",
