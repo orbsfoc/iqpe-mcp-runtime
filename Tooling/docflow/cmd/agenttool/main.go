@@ -124,7 +124,7 @@ func workflowPreflight(args []string) {
 	mcpConfiguredCommand := ""
 	mcpParseError := ""
 
-	requiredServers := []string{"repo-read-local", "docflow-actions-local"}
+	requiredServers := []string{"repo-read-local", "docflow-actions-local", "docs-graph-local", "policy-local"}
 	if data, readErr := os.ReadFile(mcpPath); readErr == nil {
 		var cfg mcpConfigFile
 		if err := json.Unmarshal(data, &cfg); err != nil {
