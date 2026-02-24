@@ -1134,13 +1134,11 @@ func runCommand(workspace, command string) (toolCallResult, error) {
 func runCommandWithEnv(workspace, command string, extraEnv map[string]string) (toolCallResult, error) {
 	cmd := exec.Command("bash", "-lc", command)
 	cmd.Dir = workspace
-	if len(extraEnv) > 0 {
-		env := os.Environ()
-		for key, value := range extraEnv {
-			env = append(env, fmt.Sprintf("%s=%s", key, value))
-		}
-		cmd.Env = env
+	env := withAugmentedPath(os.Environ())
+	for key, value := range extraEnv {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
+	cmd.Env = env
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1160,6 +1158,47 @@ func runCommandWithEnv(workspace, command string, extraEnv map[string]string) (t
 	}
 	data, _ := json.MarshalIndent(payload, "", "  ")
 	return textResult(string(data)), nil
+}
+
+func withAugmentedPath(env []string) []string {
+	pathValue := ""
+	pathIndex := -1
+	for idx, item := range env {
+		if strings.HasPrefix(item, "PATH=") {
+			pathValue = strings.TrimPrefix(item, "PATH=")
+			pathIndex = idx
+			break
+		}
+	}
+
+	entries := []string{}
+	seen := map[string]bool{}
+	for _, entry := range strings.Split(pathValue, string(os.PathListSeparator)) {
+		entry = strings.TrimSpace(entry)
+		if entry == "" || seen[entry] {
+			continue
+		}
+		seen[entry] = true
+		entries = append(entries, entry)
+	}
+
+	candidates := []string{"/snap/bin", "/usr/local/go/bin", "/usr/local/bin", "/usr/bin", "/bin"}
+	for _, candidate := range candidates {
+		if seen[candidate] {
+			continue
+		}
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			entries = append(entries, candidate)
+			seen[candidate] = true
+		}
+	}
+
+	newPath := strings.Join(entries, string(os.PathListSeparator))
+	if pathIndex >= 0 {
+		env[pathIndex] = "PATH=" + newPath
+		return env
+	}
+	return append(env, "PATH="+newPath)
 }
 
 func parseFrontmatterMap(text string) map[string]string {
