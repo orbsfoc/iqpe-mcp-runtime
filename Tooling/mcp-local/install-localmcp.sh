@@ -12,6 +12,13 @@ go build -o "$BIN_PATH" ./cmd/localmcp
 
 chmod +x "$BIN_PATH"
 
+for mode in repo-read docflow-actions docs-graph policy; do
+	if ! "$BIN_PATH" --server "$mode" --self-test >/dev/null 2>&1; then
+		echo "self-test failed for mode: $mode" >&2
+		exit 1
+	fi
+done
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
 	if command -v xattr >/dev/null 2>&1; then
 		xattr -d com.apple.quarantine "$BIN_PATH" >/dev/null 2>&1 || true
