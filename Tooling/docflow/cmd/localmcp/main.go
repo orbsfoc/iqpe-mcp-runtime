@@ -228,7 +228,7 @@ func main() {
 
 func runStdioServer(ctx serverContext) error {
 	server := buildMCPServer(ctx)
-	transport := &contentLengthStdioTransport{}
+	transport := &mcp.StdioTransport{}
 	return server.Run(context.Background(), transport)
 }
 
