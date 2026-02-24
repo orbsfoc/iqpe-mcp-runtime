@@ -575,8 +575,10 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 	scriptsDir := filepath.Join(ctx.WorkspaceRoot, "Tooling", "agent-tools", "scripts")
 	templatesPath := filepath.Join(ctx.WorkspaceRoot, "Tooling", "agent-tools", "template-registry.yaml")
 	skillVersionsPath := filepath.Join(ctx.WorkspaceRoot, "Tooling", "agent-skills", "skill-versions.yaml")
-	actionMap, err := loadActions(actionsPath)
-	if err != nil {
+	actionMap := map[string]string{}
+	if loaded, err := loadActions(actionsPath); err == nil {
+		actionMap = loaded
+	} else if !os.IsNotExist(err) {
 		return toolCallResult{}, err
 	}
 	switch name {
@@ -584,6 +586,9 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		payload, _ := json.MarshalIndent(actionMap, "", "  ")
 		return textResult(string(payload)), nil
 	case "run_action":
+		if len(actionMap) == 0 {
+			return toolCallResult{}, fmt.Errorf("action registry missing: %s (bootstrap should create Tooling/agent-tools/mcp-actions.yaml)", filepath.ToSlash(actionsPath))
+		}
 		actionID := stringArg(args, "action_id")
 		runCmd, ok := actionMap[actionID]
 		if !ok {
@@ -608,8 +613,11 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		}
 		return runCommand(ctx.WorkspaceRoot, scriptPath)
 	case "list_templates":
-		templates, loadErr := loadTemplateRegistry(templatesPath)
-		if loadErr != nil {
+		templates := []templateEntry{}
+		loaded, loadErr := loadTemplateRegistry(templatesPath)
+		if loadErr == nil {
+			templates = loaded
+		} else if !os.IsNotExist(loadErr) {
 			return toolCallResult{}, loadErr
 		}
 		payload, _ := json.MarshalIndent(templates, "", "  ")
@@ -618,6 +626,9 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		nameArg := stringArg(args, "name")
 		versionArg := stringArg(args, "version")
 		templates, loadErr := loadTemplateRegistry(templatesPath)
+		if os.IsNotExist(loadErr) {
+			return toolCallResult{}, fmt.Errorf("template registry missing: %s (bootstrap should create Tooling/agent-tools/template-registry.yaml)", filepath.ToSlash(templatesPath))
+		}
 		if loadErr != nil {
 			return toolCallResult{}, loadErr
 		}
@@ -642,8 +653,11 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		}, "", "  ")
 		return textResult(string(payload)), nil
 	case "list_skill_versions":
-		skills, loadErr := loadSkillVersions(skillVersionsPath)
-		if loadErr != nil {
+		skills := map[string]skillVersionEntry{}
+		loaded, loadErr := loadSkillVersions(skillVersionsPath)
+		if loadErr == nil {
+			skills = loaded
+		} else if !os.IsNotExist(loadErr) {
 			return toolCallResult{}, loadErr
 		}
 		payload, _ := json.MarshalIndent(skills, "", "  ")
@@ -652,6 +666,9 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		skillID := stringArg(args, "skill_id")
 		expected := stringArg(args, "expected_version")
 		skills, loadErr := loadSkillVersions(skillVersionsPath)
+		if os.IsNotExist(loadErr) {
+			return toolCallResult{}, fmt.Errorf("skill version registry missing: %s (bootstrap should create Tooling/agent-skills/skill-versions.yaml)", filepath.ToSlash(skillVersionsPath))
+		}
 		if loadErr != nil {
 			return toolCallResult{}, loadErr
 		}
