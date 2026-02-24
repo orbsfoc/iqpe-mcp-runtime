@@ -448,7 +448,7 @@ func toolsForMode(mode string) []toolSpec {
 	case "docflow-actions":
 		return []toolSpec{
 			toolSpecFrom("list_actions", "List configured MCP actions"),
-			toolSpecFrom("run_action", "Run action by action_id; extra args are exposed as ENV vars", "action_id"),
+			runActionToolSpec(),
 			toolSpecFrom("run_script", "Run script from agent-tools/scripts", "script"),
 			toolSpecFrom("list_templates", "List available templates and versions"),
 			toolSpecFrom("get_template", "Get template by name and optional version", "name"),
@@ -1276,6 +1276,20 @@ func toolSpecFrom(name, desc string, required ...string) toolSpec {
 	}
 }
 
+func runActionToolSpec() toolSpec {
+	props := map[string]any{
+		"action_id":   map[string]any{"type": "string"},
+		"phase":       map[string]any{"type": "string"},
+		"target_root": map[string]any{"type": "string"},
+		"spec_dir":    map[string]any{"type": "string"},
+	}
+	return toolSpec{
+		Name:        "run_action",
+		Description: "Run action by action_id; extra args are exposed as ENV vars",
+		InputSchema: map[string]any{"type": "object", "properties": props, "required": []any{"action_id"}},
+	}
+}
+
 func argKeyToEnv(key string) string {
 	upper := strings.ToUpper(strings.TrimSpace(key))
 	buffer := strings.Builder{}
@@ -1304,7 +1318,7 @@ func toolsForModeCompat(mode string) []toolSpec {
 	case "repo-read":
 		return []toolSpec{toolSpecFrom("list_dir", "List directory entries", "path"), toolSpecFrom("read_file", "Read file by line range", "path", "start_line", "end_line"), toolSpecFrom("grep_search", "Search regex under root", "root", "query")}
 	case "docflow-actions":
-		return []toolSpec{toolSpecFrom("list_actions", "List configured MCP actions"), toolSpecFrom("run_action", "Run action by action_id; extra args are exposed as ENV vars", "action_id"), toolSpecFrom("run_script", "Run script from agent-tools/scripts", "script"), toolSpecFrom("list_templates", "List available templates and versions"), toolSpecFrom("get_template", "Get template by name and optional version", "name"), toolSpecFrom("list_skill_versions", "List agent skills and versions"), toolSpecFrom("check_skill_version", "Check skill version (defaults to current)", "skill_id")}
+		return []toolSpec{toolSpecFrom("list_actions", "List configured MCP actions"), runActionToolSpec(), toolSpecFrom("run_script", "Run script from agent-tools/scripts", "script"), toolSpecFrom("list_templates", "List available templates and versions"), toolSpecFrom("get_template", "Get template by name and optional version", "name"), toolSpecFrom("list_skill_versions", "List agent skills and versions"), toolSpecFrom("check_skill_version", "Check skill version (defaults to current)", "skill_id")}
 	case "docs-graph":
 		return []toolSpec{toolSpecFrom("queryImpacts", "Query docs impacted by IDs", "ids"), toolSpecFrom("getLatestApproved", "Get latest approved doc by type", "doc_type")}
 	case "policy":
