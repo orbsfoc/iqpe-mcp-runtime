@@ -10,7 +10,7 @@ This folder defines the local MCP hosting scaffold for VS Code.
 - Local server binary: `iqpe-localmcp` (must be on user `PATH`)
 - Build/install script: `Tooling/mcp-local/install-localmcp.sh`
 - Use direct binary command in MCP config (avoid `bash -lc` wrappers for stdio servers).
-- Stdio implementation keeps `Content-Length` framing for VS Code local-process compatibility.
+- Stdio implementation uses the MCP Go SDK native newline-delimited JSON transport.
 
 ## Install and sign (mac-friendly)
 - `bash Tooling/mcp-local/install-localmcp.sh`
