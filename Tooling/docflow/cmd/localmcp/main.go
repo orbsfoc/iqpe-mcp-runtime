@@ -3,11 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +15,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"gopkg.in/yaml.v3"
 )
 
@@ -90,23 +93,109 @@ type skillVersionEntry struct {
 	Version string `yaml:"version"`
 }
 
-func main() {
-	mode := flag.String("server", "", "server mode: repo-read|docflow-actions|docs-graph|policy")
-	workspace := flag.String("workspace", "", "absolute workspace root path")
-	selfTest := flag.Bool("self-test", false, "run self test")
-	flag.Parse()
+type cliOptions struct {
+	Mode      string
+	Workspace string
+	SelfTest  bool
+	Transport string
+	Host      string
+	Port      string
+}
 
-	if *mode == "" {
-		fmt.Fprintln(os.Stderr, "missing --server")
+func parseCLIArgs(args []string) (cliOptions, error) {
+	opts := cliOptions{
+		Transport: "stdio",
+		Host:      "127.0.0.1",
+		Port:      "8080",
+	}
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--self-test":
+			opts.SelfTest = true
+		case arg == "--stdio":
+			continue
+		case strings.HasPrefix(arg, "--server="):
+			opts.Mode = strings.TrimSpace(strings.TrimPrefix(arg, "--server="))
+		case arg == "--server":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("missing value for --server")
+			}
+			i++
+			opts.Mode = strings.TrimSpace(args[i])
+		case strings.HasPrefix(arg, "--workspace="):
+			opts.Workspace = strings.TrimSpace(strings.TrimPrefix(arg, "--workspace="))
+		case arg == "--workspace":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("missing value for --workspace")
+			}
+			i++
+			opts.Workspace = strings.TrimSpace(args[i])
+		case strings.HasPrefix(arg, "--transport="):
+			opts.Transport = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(arg, "--transport=")))
+		case arg == "--transport":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("missing value for --transport")
+			}
+			i++
+			opts.Transport = strings.ToLower(strings.TrimSpace(args[i]))
+		case strings.HasPrefix(arg, "--host="):
+			opts.Host = strings.TrimSpace(strings.TrimPrefix(arg, "--host="))
+		case arg == "--host":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("missing value for --host")
+			}
+			i++
+			opts.Host = strings.TrimSpace(args[i])
+		case strings.HasPrefix(arg, "--port="):
+			opts.Port = strings.TrimSpace(strings.TrimPrefix(arg, "--port="))
+		case arg == "--port":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("missing value for --port")
+			}
+			i++
+			opts.Port = strings.TrimSpace(args[i])
+		case strings.HasPrefix(arg, "--log-level="):
+			continue
+		case arg == "--log-level":
+			if i+1 < len(args) {
+				i++
+			}
+		default:
+			continue
+		}
+	}
+
+	if opts.Mode == "" {
+		return opts, fmt.Errorf("missing --server")
+	}
+	if opts.Transport == "" {
+		opts.Transport = "stdio"
+	}
+	if opts.Host == "" {
+		opts.Host = "127.0.0.1"
+	}
+	if opts.Port == "" {
+		opts.Port = "8080"
+	}
+
+	return opts, nil
+}
+
+func main() {
+	opts, err := parseCLIArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(2)
 	}
 
-	if *selfTest {
-		fmt.Printf("%s self-test ok\n", *mode)
+	if opts.SelfTest {
+		fmt.Printf("%s self-test ok\n", opts.Mode)
 		return
 	}
 
-	root := *workspace
+	root := opts.Workspace
 	if root == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -121,29 +210,149 @@ func main() {
 		os.Exit(2)
 	}
 
-	ctx := serverContext{Mode: *mode, WorkspaceRoot: rootAbs}
-	reader := bufio.NewReader(os.Stdin)
-	writer := bufio.NewWriter(os.Stdout)
+	ctx := serverContext{Mode: opts.Mode, WorkspaceRoot: rootAbs}
 
-	for {
-		req, err := readRPCRequest(reader)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return
-			}
-			_ = writeRPCResponse(writer, rpcResponse{JSONRPC: "2.0", Error: &rpcError{Code: -32700, Message: err.Error()}})
-			continue
-		}
-
-		resp := handleRequest(ctx, req)
-		if req.Method == "notifications/initialized" {
-			continue
-		}
-		if err := writeRPCResponse(writer, resp); err != nil {
+	if strings.EqualFold(opts.Transport, "http") {
+		if err := runHTTPServer(ctx, opts.Host, opts.Port); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
-			return
+			os.Exit(1)
+		}
+		return
+	}
+
+	if err := runStdioServer(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+}
+
+func runStdioServer(ctx serverContext) error {
+	server := buildMCPServer(ctx)
+	transport := &contentLengthStdioTransport{}
+	return server.Run(context.Background(), transport)
+}
+
+func runHTTPServer(ctx serverContext, host, port string) error {
+	server := buildMCPServer(ctx)
+	handler := mcp.NewStreamableHTTPHandler(func(request *http.Request) *mcp.Server {
+		return server
+	}, nil)
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+	fmt.Fprintf(os.Stderr, "localmcp listening mode=%s transport=http addr=%s\n", ctx.Mode, addr)
+	return http.ListenAndServe(addr, handler)
+}
+
+func buildMCPServer(ctx serverContext) *mcp.Server {
+	server := mcp.NewServer(&mcp.Implementation{Name: ctx.Mode, Version: "0.2.0"}, nil)
+	for _, spec := range toolsForMode(ctx.Mode) {
+		name := spec.Name
+		description := spec.Description
+		schema := spec.InputSchema
+		server.AddTool(&mcp.Tool{
+			Name:        name,
+			Description: description,
+			InputSchema: schema,
+		}, func(callCtx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args, err := parseToolArgs(req)
+			if err != nil {
+				return nil, err
+			}
+			result, err := callTool(ctx, name, args)
+			if err != nil {
+				return nil, err
+			}
+			text := ""
+			if len(result.Content) > 0 {
+				text = result.Content[0]["text"]
+			}
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil
+		})
+	}
+	return server
+}
+
+func parseToolArgs(req *mcp.CallToolRequest) (map[string]any, error) {
+	if req == nil || req.Params == nil || len(req.Params.Arguments) == 0 {
+		return map[string]any{}, nil
+	}
+	var args map[string]any
+	if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+		return nil, err
+	}
+	if args == nil {
+		return map[string]any{}, nil
+	}
+	return args, nil
+}
+
+type contentLengthStdioTransport struct{}
+
+func (t *contentLengthStdioTransport) Connect(context.Context) (mcp.Connection, error) {
+	return &contentLengthStdioConn{
+		reader: bufio.NewReader(os.Stdin),
+		writer: bufio.NewWriter(os.Stdout),
+	}, nil
+}
+
+type contentLengthStdioConn struct {
+	reader *bufio.Reader
+	writer *bufio.Writer
+	mu     sync.Mutex
+}
+
+func (c *contentLengthStdioConn) Read(context.Context) (jsonrpc.Message, error) {
+	contentLength := -1
+	for {
+		line, err := c.reader.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
+		line = strings.TrimRight(line, "\r\n")
+		if line == "" {
+			break
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 && strings.EqualFold(strings.TrimSpace(parts[0]), "Content-Length") {
+			n, convErr := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if convErr != nil {
+				return nil, convErr
+			}
+			contentLength = n
 		}
 	}
+	if contentLength < 0 {
+		return nil, fmt.Errorf("missing Content-Length")
+	}
+	body := make([]byte, contentLength)
+	if _, err := io.ReadFull(c.reader, body); err != nil {
+		return nil, err
+	}
+	return jsonrpc.DecodeMessage(body)
+}
+
+func (c *contentLengthStdioConn) Write(_ context.Context, msg jsonrpc.Message) error {
+	data, err := jsonrpc.EncodeMessage(msg)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, err := c.writer.WriteString(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(data))); err != nil {
+		return err
+	}
+	if _, err := c.writer.Write(data); err != nil {
+		return err
+	}
+	return c.writer.Flush()
+}
+
+func (c *contentLengthStdioConn) Close() error {
+	return nil
+}
+
+func (c *contentLengthStdioConn) SessionID() string {
+	return ""
 }
 
 func readRPCRequest(reader *bufio.Reader) (rpcRequest, error) {
