@@ -594,7 +594,8 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		if !ok {
 			return toolCallResult{}, fmt.Errorf("unknown action_id")
 		}
-		execRoot := strings.TrimSpace(stringArg(args, "target_root"))
+		rawTargetRoot := strings.TrimSpace(stringArg(args, "target_root"))
+		execRoot := rawTargetRoot
 		if execRoot == "" {
 			execRoot = ctx.WorkspaceRoot
 		}
@@ -603,7 +604,17 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 			return toolCallResult{}, fmt.Errorf("invalid target_root: %v", absErr)
 		}
 		if info, statErr := os.Stat(absExecRoot); statErr != nil || !info.IsDir() {
-			return toolCallResult{}, fmt.Errorf("target_root does not exist or is not a directory: %s", filepath.ToSlash(absExecRoot))
+			workspaceAbs, _ := filepath.Abs(ctx.WorkspaceRoot)
+			workspaceInfo, workspaceErr := os.Stat(workspaceAbs)
+			if workspaceErr == nil && workspaceInfo.IsDir() {
+				if filepath.Base(absExecRoot) == filepath.Base(workspaceAbs) || strings.Contains(absExecRoot, "/home/") {
+					absExecRoot = workspaceAbs
+				} else {
+					return toolCallResult{}, fmt.Errorf("target_root does not exist in MCP runtime context: %s (try mounted workspace path: %s)", filepath.ToSlash(absExecRoot), filepath.ToSlash(workspaceAbs))
+				}
+			} else {
+				return toolCallResult{}, fmt.Errorf("target_root does not exist or is not a directory: %s", filepath.ToSlash(absExecRoot))
+			}
 		}
 		env := map[string]string{}
 		for key, value := range args {
@@ -619,6 +630,9 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		}
 		if _, ok := env["TARGET_ROOT"]; !ok {
 			env["TARGET_ROOT"] = absExecRoot
+		}
+		if rawTargetRoot != "" {
+			env["TARGET_ROOT_ORIGINAL"] = rawTargetRoot
 		}
 		return runCommandWithEnv(absExecRoot, runCmd, env)
 	case "run_script":
