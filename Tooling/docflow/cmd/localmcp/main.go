@@ -594,6 +594,17 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 		if !ok {
 			return toolCallResult{}, fmt.Errorf("unknown action_id")
 		}
+		execRoot := strings.TrimSpace(stringArg(args, "target_root"))
+		if execRoot == "" {
+			execRoot = ctx.WorkspaceRoot
+		}
+		absExecRoot, absErr := filepath.Abs(execRoot)
+		if absErr != nil {
+			return toolCallResult{}, fmt.Errorf("invalid target_root: %v", absErr)
+		}
+		if info, statErr := os.Stat(absExecRoot); statErr != nil || !info.IsDir() {
+			return toolCallResult{}, fmt.Errorf("target_root does not exist or is not a directory: %s", filepath.ToSlash(absExecRoot))
+		}
 		env := map[string]string{}
 		for key, value := range args {
 			if key == "action_id" {
@@ -601,7 +612,15 @@ func callDocflowActions(ctx serverContext, name string, args map[string]any) (to
 			}
 			env[argKeyToEnv(key)] = fmt.Sprint(value)
 		}
-		return runCommandWithEnv(ctx.WorkspaceRoot, runCmd, env)
+		if rawEnv, ok := args["env"].(map[string]any); ok {
+			for key, value := range rawEnv {
+				env[argKeyToEnv(key)] = fmt.Sprint(value)
+			}
+		}
+		if _, ok := env["TARGET_ROOT"]; !ok {
+			env["TARGET_ROOT"] = absExecRoot
+		}
+		return runCommandWithEnv(absExecRoot, runCmd, env)
 	case "run_script":
 		scriptName := stringArg(args, "script")
 		scriptPath := filepath.Clean(filepath.Join(scriptsDir, scriptName))
@@ -1289,10 +1308,11 @@ func runActionToolSpec() toolSpec {
 		"catalog_repo_root":      map[string]any{"type": "string"},
 		"project_slug":           map[string]any{"type": "string"},
 		"allow_local_bundle":     map[string]any{"type": "string"},
+		"env":                    map[string]any{"type": "object"},
 	}
 	return toolSpec{
 		Name:        "run_action",
-		Description: "Run action by action_id; extra args are exposed as ENV vars",
+		Description: "Run action by action_id in target_root; extra args/env are exposed as ENV vars",
 		InputSchema: map[string]any{"type": "object", "properties": props, "required": []any{"action_id"}},
 	}
 }
